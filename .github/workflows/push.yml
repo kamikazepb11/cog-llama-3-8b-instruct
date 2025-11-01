@@ -1,0 +1,31 @@
+name: Launch Fine-Tuning
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Enter the Replicate model name (e.g., resonance/svs)'
+        required: false
+        default: 'resonance/svs' # Default to the name we're using
+
+jobs:
+  launch-training:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' 
+
+      - name: 📦 Install Dependencies
+        run: |
+          pip install replicate
+
+      - name: 🚀 Run Fine-Tuning Script
+        env:
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+        run: |
+          # This command executes your script which contains the IMAGE_SHA and data URL
+          python3 start_finetuning.py
