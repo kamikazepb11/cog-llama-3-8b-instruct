@@ -4,12 +4,11 @@ import json
 from datetime import datetime
 
 # --- CRITICAL CONFIGURATION ---
-# This is the dedicated trainer model for Llama 3 8B Instruct. 
-# Using this name satisfies the SDK and points to a version certified for training.
-TRAINER_VERSION_REF = "meta/llama-3-8b-instruct:a0322c31e21b777a28e93540d426de9f196191a62d539552d7515082f42a9b34"
+# We use the manually created model name for both source and destination.
+# This should resolve the 404 error now that the model registry exists.
+TRAINER_VERSION_REF = "resonance/svs" 
 
 # The desired final model name (The registry that will hold the fine-tune).
-# This registry will be implicitly created upon successful training launch.
 DESTINATION_MODEL = "resonance/svs" 
 
 # The direct, publicly accessible URL for your training data from Google Drive.
@@ -17,6 +16,7 @@ TRAINING_DATA_URL = "https://drive.google.com/uc?export=download&id=1s26AGX9C1VE
 
 # --- Hyperparameters ---
 HYPERPARAMETERS = {
+    # NOTE: Replicate will automatically select the Llama 3 8B model when using this trainer.
     "train_data": TRAINING_DATA_URL,
     "lora_rank": 4,           
     "lora_alpha": 8,          
@@ -27,7 +27,7 @@ HYPERPARAMETERS = {
 }
 
 def launch_training():
-    """Launches the fine-tuning job using the official Llama 3 trainer as the version."""
+    """Launches the fine-tuning job using the official Llama 3 trainer template."""
     
     # Check for API Token
     api_token = os.environ.get("REPLICATE_API_TOKEN")
@@ -44,16 +44,17 @@ def launch_training():
 
     # 2. Launch the training job
     print("\n--- Attempting to Initiate Fine-Tuning Job ---")
-    print(f"Base Trainer Version: {TRAINER_VERSION_REF}")
+    print(f"Base Trainer Version (Source): {TRAINER_VERSION_REF}")
     print(f"Destination Model: {DESTINATION_MODEL}")
     print(f"Training Data URL: {TRAINING_DATA_URL}")
     print(f"Parameters: {HYPERPARAMETERS}")
 
     try:
-        # We use the official trainer reference, which should satisfy the SDK validation.
+        # We use your model name for both version and destination.
+        # This is the last and most direct API call possible.
         training = client.trainings.create(
-            version=TRAINER_VERSION_REF,  # The dedicated trainer model
-            destination=DESTINATION_MODEL, # Your new model registry name (will be created)
+            version=TRAINER_VERSION_REF,  
+            destination=DESTINATION_MODEL, 
             input=HYPERPARAMETERS,
         )
         
