@@ -6,7 +6,7 @@ from datetime import datetime
 # --- CRITICAL CONFIGURATION ---
 # This is the dedicated trainer model for Llama 3 8B Instruct. 
 # Using this name satisfies the SDK and points to a version certified for training.
-TRAINER_VERSION_REF = "meta/llama-3-8b-instruct-trainer"
+TRAINER_VERSION_REF = "meta/llama-3-8b-instruct:a0322c31e21b777a28e93540d426de9f196191a62d539552d7515082f42a9b34"
 
 # The desired final model name (The registry that will hold the fine-tune).
 # This registry will be implicitly created upon successful training launch.
