@@ -1,0 +1,10 @@
+build:
+  gpu: true
+  python_version: "3.11"
+  python_requirements: "requirements.txt"
+  cuda: "12.1"
+  # NOTE: The 'train' entry is MANDATORY for Replicate to accept fine-tuning jobs.
+  # We assume your core training logic resides in a 'train.py' file.
+train: "train.py:train" 
+
+predict: "predict.py:Predictor"
