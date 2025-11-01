@@ -4,11 +4,12 @@ import json
 from datetime import datetime
 
 # --- CRITICAL CONFIGURATION ---
-# We must use an existing, full version reference to satisfy the Python SDK.
-# This points the training job to the official Llama 3 8B Instruct model as the base.
-TRAINER_VERSION_REF = "meta/meta-llama-3-8b-instruct:5a6809ca6288247d06daf6365557e5e429063f32a21146b2a807c682652136b8"
+# This is the dedicated trainer model for Llama 3 8B Instruct. 
+# Using this name satisfies the SDK and points to a version certified for training.
+TRAINER_VERSION_REF = "meta/llama-3-8b-instruct-trainer"
 
-# The desired final model name (The registry where the fine-tune will be saved).
+# The desired final model name (The registry that will hold the fine-tune).
+# This registry will be implicitly created upon successful training launch.
 DESTINATION_MODEL = "resonance/svs" 
 
 # The direct, publicly accessible URL for your training data from Google Drive.
@@ -49,9 +50,9 @@ def launch_training():
     print(f"Parameters: {HYPERPARAMETERS}")
 
     try:
-        # We use the full, valid model version reference, which should satisfy the SDK.
+        # We use the official trainer reference, which should satisfy the SDK validation.
         training = client.trainings.create(
-            version=TRAINER_VERSION_REF,  
+            version=TRAINER_VERSION_REF,  # The dedicated trainer model
             destination=DESTINATION_MODEL, # Your new model registry name (will be created)
             input=HYPERPARAMETERS,
         )
