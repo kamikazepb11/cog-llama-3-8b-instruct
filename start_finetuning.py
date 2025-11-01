@@ -4,15 +4,14 @@ import json
 from datetime import datetime
 
 # --- CRITICAL CONFIGURATION ---
-# The Image SHA of the successfully built Docker image.
-# This is used as the 'version' to bypass the cog push/registry error.
-IMAGE_SHA = "443bfd59c5e56fe70a69cd3cffb908b49860238c5248bf95e937151ecc7a2872"
+# We must use an existing, full version reference to satisfy the Python SDK.
+# This points the training job to the official Llama 3 8B Instruct model as the base.
+TRAINER_VERSION_REF = "meta/meta-llama-3-8b-instruct:5a6809ca6288247d06daf6365557e5e429063f32a21146b2a807c682652136b8"
 
-# The desired final model name (The registry that will hold the fine-tune).
+# The desired final model name (The registry where the fine-tune will be saved).
 DESTINATION_MODEL = "resonance/svs" 
 
 # The direct, publicly accessible URL for your training data from Google Drive.
-# This link is required for the Replicate API to access the file.
 TRAINING_DATA_URL = "https://drive.google.com/uc?export=download&id=1s26AGX9C1VEdfkzbuaJs1hXGNO3rPnVA" 
 
 # --- Hyperparameters ---
@@ -27,7 +26,7 @@ HYPERPARAMETERS = {
 }
 
 def launch_training():
-    """Launches the fine-tuning job using the specific Image SHA and the public data URL."""
+    """Launches the fine-tuning job using the official Llama 3 trainer as the version."""
     
     # Check for API Token
     api_token = os.environ.get("REPLICATE_API_TOKEN")
@@ -44,17 +43,16 @@ def launch_training():
 
     # 2. Launch the training job
     print("\n--- Attempting to Initiate Fine-Tuning Job ---")
-    print(f"Base Image SHA (Version): {IMAGE_SHA}")
+    print(f"Base Trainer Version: {TRAINER_VERSION_REF}")
     print(f"Destination Model: {DESTINATION_MODEL}")
     print(f"Training Data URL: {TRAINING_DATA_URL}")
     print(f"Parameters: {HYPERPARAMETERS}")
 
     try:
-        # CRITICAL STEP: Use the raw Image SHA as the 'version'. 
-        # This is the workaround to bypass the failed 'cog push' registration.
+        # We use the full, valid model version reference, which should satisfy the SDK.
         training = client.trainings.create(
-            version=IMAGE_SHA,  
-            destination=DESTINATION_MODEL,
+            version=TRAINER_VERSION_REF,  
+            destination=DESTINATION_MODEL, # Your new model registry name (will be created)
             input=HYPERPARAMETERS,
         )
         
