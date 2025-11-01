@@ -1,0 +1,53 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Model name (owner/model)'
+        required: true
+        default: 'resonance/svs'
+
+jobs:
+  # 1. DEPLOYMENT JOB: Builds the model container and pushes it to Replicate.
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Cog & Auth
+        # This action automatically installs Cog, Docker Buildx, and logs in using the secret.
+        uses: replicate/setup-cog@v2
+        with:
+          token: ${{ secrets.REPLICATE_API_TOKEN }} # Or REPLICATE_CLI_AUTH_TOKEN
+
+      - name: Push to Replicate
+        # This command builds the image and pushes it, creating the base version.
+        run: |
+          cog push r8.im/${{ inputs.model_name }}
+
+  # 2. TRAINING JOB: Runs the Python script ONLY after deployment is successful.
+  launch-training:
+    needs: deploy # MANDATORY: This job only runs if 'deploy' succeeds.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' 
+
+      - name: Install Replicate SDK
+        run: |
+          pip install replicate
+          
+      - name: Run Fine-Tuning Script
+        env:
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+        run: |
+          # This command executes your API call to start the training job.
+          python3 start_finetuning.py
