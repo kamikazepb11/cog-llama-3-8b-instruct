@@ -1,21 +1,16 @@
 build:
   gpu: true
-  python_version: "3.10" # Stable Python to avoid compilation errors
+  python_version: "3.10" 
   python_requirements: "requirements.txt"
-  cuda: "12.1"
+  # REMOVED: cuda: "12.1" - Rely on Cog's automatic CUDA version for stability
 
-  # CRITICAL FINAL FIX: Install complex packages individually using --no-deps to skip installing large NVIDIA libraries (which are already on the A100 host).
+  # REMOVED: All system_packages (rely on base image stability)
+  
+  # FINAL CRITICAL FIX: Only run necessary package installs, relying on minimal dependencies
   run:
-    # 1. Install PyTorch, Transformers, Accelerate, etc.
-    #    Note: Torch is removed from requirements.txt and is implicitly provided by the CUDA base image,
-    #    but we install BITSANDBYTES and TRL with --no-deps to prevent them from triggering massive secondary installs.
-    - pip install bitsandbytes==0.43.2 --no-deps
-    - pip install trl==0.9.4 --no-deps
-    
-    # 2. Install Unsloth (the only highly specialized install left)
-    - pip install unsloth[lora]==2024.9
-    
-    # 3. Aggressive cleanup of installation cache right before the copy step to ensure max space
+    # 1. Install Unsloth with --no-deps (Its dependencies are handled by pip -r)
+    - pip install unsloth[lora]==2024.9 --no-deps
+    # 2. Aggressive cleanup of PIP cache (to recover space)
     - pip cache purge
     
 train: "train.py:train" 
