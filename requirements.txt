@@ -1,4 +1,5 @@
-# requirements.txt (Only light dependencies needed by Cog's base layer)
+# requirements.txt
+# REMOVED: torch==2.3.1
 transformers==4.43.3
 accelerate==0.31.0
 datasets==2.19.2
