@@ -3,22 +3,31 @@ build:
   python_version: "3.11"
   python_requirements: "requirements.txt"
   cuda: "12.1"
-
-  # CRITICAL FIX: Expanded system packages for robust compilation, resolving unicodeobject.o error.
+  
+  # CRITICAL FIX: Allocate more space for compilation and installation to solve "No space left"
+  build_disk_space: 100 # Allocates 100 GB for the build environment
+  
+  # System libraries needed for full Python compilation (to resolve symtable.o and sysmodule.o errors)
   system_packages:
-    - "build-essential"   # Provides the core compiler (gcc, make)
-    - "libssl-dev"        # Required for secure downloads and Python's SSL module
-    - "zlib1g-dev"        # Compression libraries
+    - "build-essential"   
+    - "libssl-dev"        
+    - "zlib1g-dev"        
     - "libbz2-dev"        
     - "libreadline-dev"   
     - "libsqlite3-dev"    
     - "libffi-dev"        
     - "liblzma-dev"       
-    - "python3-dev"       # Python header files (Needed for custom C extensions)
+    - "python3-dev"       
+    - "tk-dev"            
+    - "libncurses5-dev"   
+    - "libgdbm-dev"       
+    - "libc6-dev"         
+    - "libblas-dev"       
+    - "liblapack-dev"     
     - "git"
     - "curl"              
 
-  # CRITICAL FIX: Manually install Unsloth to bypass 'metadata-generation-failed' errors.
+  # Manually install Unsloth to bypass 'metadata-generation-failed' errors.
   run:
     - pip install unsloth[lora]==2024.9 
     
