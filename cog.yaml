@@ -1,18 +1,22 @@
 build:
   gpu: true
-  python_version: "3.10" # Stable Python
+  python_version: "3.10" # Stable Python to avoid compilation errors
   python_requirements: "requirements.txt"
   cuda: "12.1"
-  
-  # Remove all complex system packages and rely on Cog's default optimized base image for 3.10
-  # This makes the build smaller and faster.
-  # We will only keep 'run' for unsloth as a specialized package.
-  
+
+  # CRITICAL FINAL FIX: Install complex packages individually using --no-deps to skip installing large NVIDIA libraries (which are already on the A100 host).
   run:
-    # 1. Install bitsandbytes (needed for 4-bit) and trl first
-    - pip install bitsandbytes==0.43.2 trl==0.9.4
-    # 2. Install Unsloth
-    - pip install unsloth[lora]==2024.9 
+    # 1. Install PyTorch, Transformers, Accelerate, etc.
+    #    Note: Torch is removed from requirements.txt and is implicitly provided by the CUDA base image,
+    #    but we install BITSANDBYTES and TRL with --no-deps to prevent them from triggering massive secondary installs.
+    - pip install bitsandbytes==0.43.2 --no-deps
+    - pip install trl==0.9.4 --no-deps
+    
+    # 2. Install Unsloth (the only highly specialized install left)
+    - pip install unsloth[lora]==2024.9
+    
+    # 3. Aggressive cleanup of installation cache right before the copy step to ensure max space
+    - pip cache purge
     
 train: "train.py:train" 
 predict: "predict.py:Predictor"
