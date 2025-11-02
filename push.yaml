@@ -15,17 +15,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1. CHECKOUT WITH FULL HISTORY (CRITICAL FOR LFS)
+      # 1. CHECKOUT (No special LFS flags needed)
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Ensures LFS can find the entire file history
-
-      # 2. PULL LFS WEIGHTS (DOWNLOAD 10GB MODEL)
-      - name: PULL LFS WEIGHTS
-        # This step downloads the actual binary weights onto the runner
-        run: |
-          git lfs pull
-        
+      
+      # 2. Setup Cog & Auth
       - name: Setup Cog & Auth
         uses: replicate/setup-cog@v2
         with:
@@ -33,4 +26,5 @@ jobs:
           
       - name: Push Model to Replicate Registry
         run: |
+          # The model name is passed via GitHub Action input
           cog push r8.im/${{ inputs.model_name }}

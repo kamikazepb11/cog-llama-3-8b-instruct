@@ -1,0 +1,10 @@
+# replicate.yaml
+trainings:
+  default:
+    # Guaranteed A100 80GB for stable training
+    gpu: A100-80GB
+    resources:
+      gpu_count: 1
+    limits:
+      # Max duration is 10 hours for a safety net
+      max_duration: 600

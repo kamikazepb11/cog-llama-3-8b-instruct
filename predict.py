@@ -1,103 +1,91 @@
+# predict.py
+import os
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from cog import BasePredictor, Input
-from typing import Iterator # CORRECTED IMPORT: Iterator is now imported from typing, not cog
+import sys
+from unsloth import FastLanguageModel
+from cog import BasePredictor, Input, Path
 
-# The Llama 3 prompt template is required for correct dialogue formatting
-B_INST, E_INST = "[INST]", "[/INST]"
-B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
+# --- Configuration Constants ---
+# MUST MATCH the model name used in train.py
+MODEL_NAME = "meta-llama/Meta-Llama-3-8B-Instruct" 
+MAX_SEQ_LENGTH = 2048 # Max context length for inference
+OUTPUT_ADAPTERS = "output_weights" # Directory where train.py saves adapters
 
-# The official Hugging Face ID for the Llama 3 8B Instruct model
-MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+# Add the output directory to the path so modules can be imported
+sys.path.append(OUTPUT_ADAPTERS)
 
 class Predictor(BasePredictor):
     def setup(self):
-        """
-        Load the model and tokenizer into memory. This runs once on startup.
-        We use 4-bit quantization (QLoRA) to reduce VRAM usage.
-        """
-        print("Loading model...")
+        """Load the model and tokenizer into memory for prediction"""
+        print("Starting model setup: Loading Llama 3 base and merging LoRA adapters...")
         
-        # 1. Define 4-bit quantization configuration
-        self.bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
+        # 1. Load the base model (unsloth optimized)
+        # We load in 4-bit for memory efficiency even during inference
+        self.model, self.tokenizer = FastLanguageModel.from_pretrained(
+            model_name = MODEL_NAME,
+            max_seq_length = MAX_SEQ_LENGTH,
+            dtype = None, # Auto-detects bfloat16 for A100/H100
+            load_in_4bit = True, 
+            # Use your Hugging Face token (set as a secret on Replicate)
+            token = os.environ.get("HF_TOKEN") 
         )
 
-        # 2. Load the model and tokenizer using the configuration
-        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            quantization_config=self.bnb_config,
-            device_map="auto", # Automatically maps model layers to available hardware
-            trust_remote_code=True
-        )
-        print("Model loaded successfully.")
+        # 2. Load the fine-tuned LoRA adapters
+        try:
+            self.model = FastLanguageModel.get_peft_model(self.model)
+            self.model.load_adapter(OUTPUT_ADAPTERS)
+        except Exception as e:
+             # This block handles the case where setup runs before training is complete
+            print(f"Warning: Could not load LoRA adapters from {OUTPUT_ADAPTERS}. Error: {e}")
+            print("Proceeding with base model for testing.")
+
+        # 3. Merge LoRA weights into the base model for faster inference
+        # This is a critical step for maximizing chat performance
+        self.model.base_model.merge_and_unload()
+        
+        # Ensure model is ready for generation
+        self.model.to(dtype=torch.bfloat16).cuda()
+        self.tokenizer.pad_token = self.tokenizer.eos_token 
+
+        print("Model loading and merging complete. Ready for chat.")
 
     def predict(
         self,
-        prompt: str = Input(
-            description="The prompt to send to the model for generation.",
-            default="Explain why large language models are so resource intensive in one paragraph."
-        ),
+        prompt: str = Input(description="The user's input/question for the chat model.",),
         system_prompt: str = Input(
-            description="System instructions to set the model's behavior/persona.",
-            default="You are a helpful and detailed assistant."
+            description="The system instruction to guide the model's style, role, and IP.",
+            default="You are a helpful and witty chat assistant trained by [Your Company Name]. You maintain a friendly, engaging, and professional tone, focused on delivering high-quality, safe, and accurate conversational responses.",
         ),
-        max_new_tokens: int = Input(
-            description="The maximum number of tokens to generate in the response.",
-            default=512,
-            ge=1,
-            le=4096
-        ),
-        temperature: float = Input(
-            description="Adjusts randomness of outputs. Higher values are more random.",
-            default=0.6,
-            ge=0.1,
-            le=5.0
-        ),
-        top_p: float = Input(
-            description="When decoding text, samples from the top p percent of most likely tokens. Lower values are more deterministic.",
-            default=0.9,
-            ge=0.01,
-            le=1.0
-        ),
-    ) -> Iterator[str]:
-        """
-        Run a single prediction and stream the output.
-        """
-        # 1. Format the conversation using the Llama 3 chat template
-        if system_prompt:
-            # Use the official Llama 3 template format
-            formatted_prompt = f"{B_INST}{B_SYS}{system_prompt}{E_SYS}{prompt}{E_INST}"
-        else:
-            formatted_prompt = f"{B_INST} {prompt} {E_INST}"
-
-        # 2. Tokenize the input
-        inputs = self.tokenizer(formatted_prompt, return_tensors="pt").to(self.model.device)
-
-        # 3. Define termination tokens for Llama 3
-        # Llama 3 uses <|eot_id|> (128009) and the standard eos_token_id
-        terminators = [
-            self.tokenizer.eos_token_id,
-            self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+        max_new_tokens: int = Input(description="Maximum tokens to generate.", default=1024),
+        temperature: float = Input(description="Adjusts randomness of outputs. 0.0 is deterministic, 1.0 is highly random.", default=0.6, ge=0.0, le=5.0),
+        top_p: float = Input(description="Nucleus sampling threshold.", default=0.9, ge=0.0, le=1.0),
+    ) -> str:
+        
+        # 4. Apply Llama 3 Chat Template
+        # This structure retains your IP via the system_prompt
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
         ]
+        
+        # Format the chat into the required Llama 3 token sequence: <|start_header_id|>...
+        inputs = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt"
+        ).to(self.model.device)
 
-        # 4. Start the streaming generation
-        output_stream = self.model.generate(
-            **inputs,
+        # 5. Generate the response
+        outputs = self.model.generate(
+            inputs,
             max_new_tokens=max_new_tokens,
-            do_sample=True,
             temperature=temperature,
             top_p=top_p,
-            eos_token_id=terminators,
-            repetition_penalty=1.1,
-            streamer=True, # Enable streaming output
+            do_sample=True,
+            use_cache=True,
         )
-        
-        # 5. Yield tokens from the stream
-        for token in output_stream:
-            # The streamer will output token objects, yield the decoded string
-            yield self.tokenizer.decode([token], skip_special_tokens=True)
+
+        # 6. Decode and return the assistant's reply
+        response = self.tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True)
+        return response.strip()
