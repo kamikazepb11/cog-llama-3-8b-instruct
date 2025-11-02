@@ -1,4 +1,4 @@
-name: Model Deployment (COG PUSH)
+name: Final Model Deployment V2
 
 on:
   push:
@@ -9,22 +9,28 @@ on:
       model_name:
         description: 'Model Name (owner/model) for Cog Push'
         required: true
-        default: 'resonance/svs' # Our target model
+        default: 'resonance/svs'
 
 jobs:
-  # This is the ONLY job needed to create the model on Replicate.
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1. CHECKOUT WITH FULL HISTORY (CRITICAL FOR LFS)
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Ensures LFS can find the entire file history
 
+      # 2. PULL LFS WEIGHTS (DOWNLOAD 10GB MODEL)
+      - name: PULL LFS WEIGHTS
+        # This step downloads the actual binary weights onto the runner
+        run: |
+          git lfs pull
+        
       - name: Setup Cog & Auth
-        # This installs Cog and logs in using the secret.
         uses: replicate/setup-cog@v2
         with:
           token: ${{ secrets.REPLICATE_API_TOKEN }} 
           
       - name: Push Model to Replicate Registry
-        # This builds the image using cog.yaml and pushes it.
         run: |
           cog push r8.im/${{ inputs.model_name }}
