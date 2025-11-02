@@ -2,24 +2,24 @@ build:
   gpu: true
   python_version: "3.10" 
   python_requirements: "requirements.txt"
-  cuda: "12.1"
+  cuda: "11.8" # CHANGED to CUDA 11.8 to force a potentially cleaner/cached build node.
+
+  # We removed the huge system_packages list and rely on the base image + subsequent sequential installs.
   
-  # CRITICAL FINAL FIX: Install every large package with --no-deps to skip CUDA files.
+  # CRITICAL FINAL FIX: Install PyTorch and complex packages sequentially with --no-deps to skip installing large NVIDIA libraries and manage disk quota.
   run:
-    # 1. Install PyTorch with --no-deps (the largest file)
+    # 1. Install PyTorch (the largest file) with --no-deps to prevent disk overflow during CUDA lib pull.
     - pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121 --no-deps
     
-    # 2. Install scientific dependencies (needed for Hugging Face) without their dependencies
-    - pip install scipy numpy --no-deps 
-
-    # 3. Install complex libraries without their dependency chain
+    # 2. Install complex libraries without their dependency chain
     - pip install bitsandbytes==0.43.2 --no-deps
     - pip install trl==0.9.4 --no-deps
+    - pip install scipy numpy --no-deps
     
-    # 4. Install Unsloth (the final specialized package)
+    # 3. Install Unsloth (the final specialized package)
     - pip install unsloth[lora]==2024.9
     
-    # 5. Aggressive cleanup of PIP cache
+    # 4. Aggressive cleanup of PIP cache
     - pip cache purge
     
 train: "train.py:train" 
