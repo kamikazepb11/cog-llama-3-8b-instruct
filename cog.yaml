@@ -1,22 +1,22 @@
 build:
   gpu: true
-  python_version: "3.10" # Stable Python to avoid compilation errors
+  python_version: "3.10" 
   python_requirements: "requirements.txt"
   cuda: "12.1"
   
-  # CRITICAL FINAL FIX: Install massive components sequentially to manage disk quota.
+  # CRITICAL FINAL FIX: Install PyTorch and complex packages with --no-deps to skip installing large NVIDIA libraries and manage disk quota.
   run:
-    # 1. Install PyTorch with specific CUDA index (the largest file)
-    - pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+    # 1. Install PyTorch (the biggest file) with --no-deps. This is the only way to prevent disk overflow.
+    - pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121 --no-deps
     
-    # 2. Install complex libraries without their dependency chain (already installed by PyTorch above)
+    # 2. Install complex libraries without their dependency chain
     - pip install bitsandbytes==0.43.2 --no-deps
     - pip install trl==0.9.4 --no-deps
     
     # 3. Install Unsloth (the final specialized package)
     - pip install unsloth[lora]==2024.9
     
-    # 4. Aggressive cleanup of PIP cache (to free up temporary download space)
+    # 4. Aggressive cleanup of PIP cache
     - pip cache purge
     
 train: "train.py:train" 
