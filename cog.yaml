@@ -1,16 +1,22 @@
 build:
   gpu: true
-  python_version: "3.10" 
+  python_version: "3.10" # Stable Python to avoid compilation errors
   python_requirements: "requirements.txt"
-  # REMOVED: cuda: "12.1" - Rely on Cog's automatic CUDA version for stability
-
-  # REMOVED: All system_packages (rely on base image stability)
+  cuda: "12.1"
   
-  # FINAL CRITICAL FIX: Only run necessary package installs, relying on minimal dependencies
+  # CRITICAL FINAL FIX: Install massive components sequentially to manage disk quota.
   run:
-    # 1. Install Unsloth with --no-deps (Its dependencies are handled by pip -r)
-    - pip install unsloth[lora]==2024.9 --no-deps
-    # 2. Aggressive cleanup of PIP cache (to recover space)
+    # 1. Install PyTorch with specific CUDA index (the largest file)
+    - pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+    
+    # 2. Install complex libraries without their dependency chain (already installed by PyTorch above)
+    - pip install bitsandbytes==0.43.2 --no-deps
+    - pip install trl==0.9.4 --no-deps
+    
+    # 3. Install Unsloth (the final specialized package)
+    - pip install unsloth[lora]==2024.9
+    
+    # 4. Aggressive cleanup of PIP cache (to free up temporary download space)
     - pip cache purge
     
 train: "train.py:train" 
