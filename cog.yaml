@@ -1,11 +1,22 @@
 # cog.yaml
+name: Deploy Llama 3 QLoRA Environment
+
 build:
   gpu: true
   python_version: "3.11"
   python_requirements: "requirements.txt"
   cuda: "12.1"
-  
-  # CRITICAL FIX: Manually install Unsloth after the main dependencies
+
+  # CRITICAL FIX: Adding essential Linux packages for compiling Python modules (like SSL, Unicode)
+  system_packages:
+    - "build-essential"   # Necessary for compilation tools (make, gcc)
+    - "libssl-dev"        # SSL libraries
+    - "libffi-dev"        # Foreign Function Interface library
+    - "python3-dev"       # Python header files
+    - "git"
+    - "curl"              # Necessary for pyenv-installer which is often used in the base image
+
+  # Manually install Unsloth after the main dependencies
   run:
     - pip install unsloth[lora]==2024.9 
     
