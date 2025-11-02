@@ -1,31 +1,17 @@
 build:
   gpu: true
-  python_version: "3.10" # CHANGED to 3.10 for build stability and cached images
+  python_version: "3.10" # Stable Python
   python_requirements: "requirements.txt"
   cuda: "12.1"
-
-  # System packages added to support compilation of Python (libssl) and scientific dependencies (libblas, liblapack, build-essential).
-  system_packages:
-    - "build-essential"   
-    - "libssl-dev"        
-    - "zlib1g-dev"        
-    - "libbz2-dev"        
-    - "libreadline-dev"   
-    - "libsqlite3-dev"    
-    - "libffi-dev"        
-    - "liblzma-dev"       
-    - "python3-dev"       
-    - "tk-dev"            
-    - "libncurses5-dev"   
-    - "libgdbm-dev"       
-    - "libc6-dev"         
-    - "libblas-dev"       
-    - "liblapack-dev"     
-    - "git"
-    - "curl"              
-
-  # Manually install Unsloth (the complex library) to bypass the main pip install block and avoid metadata errors.
+  
+  # Remove all complex system packages and rely on Cog's default optimized base image for 3.10
+  # This makes the build smaller and faster.
+  # We will only keep 'run' for unsloth as a specialized package.
+  
   run:
+    # 1. Install bitsandbytes (needed for 4-bit) and trl first
+    - pip install bitsandbytes==0.43.2 trl==0.9.4
+    # 2. Install Unsloth
     - pip install unsloth[lora]==2024.9 
     
 train: "train.py:train" 
