@@ -1,4 +1,4 @@
-name: Model Deployment (Cog Push)
+name: Model Deployment (COG PUSH)
 
 on:
   push:
@@ -7,24 +7,24 @@ on:
   workflow_dispatch:
     inputs:
       model_name:
-        description: 'Model name (owner/model) for Cog Push'
+        description: 'Model Name (owner/model) for Cog Push'
         required: true
-        default: 'resonance/svs'
+        default: 'resonance/svs' # Our target model
 
 jobs:
-  # 1. DEDICATED DEPLOYMENT JOB: Builds and pushes the model container.
+  # This is the ONLY job needed to create the model on Replicate.
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Cog & Auth
-        # This action automatically installs Cog, Docker Buildx, and logs in using the secret.
+        # This installs Cog and logs in using the secret.
         uses: replicate/setup-cog@v2
         with:
-          token: ${{ secrets.REPLICATE_API_TOKEN }} # Or REPLICATE_CLI_AUTH_TOKEN
-
+          token: ${{ secrets.REPLICATE_API_TOKEN }} 
+          
       - name: Push Model to Replicate Registry
-        # This is the single, isolated deployment command.
+        # This builds the image using cog.yaml and pushes it.
         run: |
           cog push r8.im/${{ inputs.model_name }}
