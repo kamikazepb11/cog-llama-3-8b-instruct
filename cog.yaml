@@ -4,19 +4,22 @@ build:
   python_requirements: "requirements.txt"
   cuda: "12.1"
   
-  # CRITICAL FINAL FIX: Install PyTorch and complex packages with --no-deps to skip installing large NVIDIA libraries and manage disk quota.
+  # CRITICAL FINAL FIX: Install every large package with --no-deps to skip CUDA files.
   run:
-    # 1. Install PyTorch (the biggest file) with --no-deps. This is the only way to prevent disk overflow.
+    # 1. Install PyTorch with --no-deps (the largest file)
     - pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121 --no-deps
     
-    # 2. Install complex libraries without their dependency chain
+    # 2. Install scientific dependencies (needed for Hugging Face) without their dependencies
+    - pip install scipy numpy --no-deps 
+
+    # 3. Install complex libraries without their dependency chain
     - pip install bitsandbytes==0.43.2 --no-deps
     - pip install trl==0.9.4 --no-deps
     
-    # 3. Install Unsloth (the final specialized package)
+    # 4. Install Unsloth (the final specialized package)
     - pip install unsloth[lora]==2024.9
     
-    # 4. Aggressive cleanup of PIP cache
+    # 5. Aggressive cleanup of PIP cache
     - pip cache purge
     
 train: "train.py:train" 
