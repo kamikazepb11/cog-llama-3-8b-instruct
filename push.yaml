@@ -1,6 +1,6 @@
 # .github/workflows/push.yaml
 
-name: Final Llama 3 QLoRA Train and Deploy
+name: Deploy Llama 3 QLoRA Environment
 
 on:
   # Trigger automatically whenever code is pushed to the main branch
@@ -16,11 +16,10 @@ on:
         default: 'resonance/svs' # Your default model name
 
 jobs:
-  # This job both builds the image AND runs the training script inside it.
-  deploy_and_train:
-    # We must run this on a powerful runner to handle the image build and script execution
+  # This job only builds the environment and pushes the image.
+  deploy_image:
     runs-on: ubuntu-latest
-    timeout-minutes: 180 # Set a generous timeout (3 hours) for the full process
+    timeout-minutes: 30 # Set a shorter timeout, as this should be fast
 
     steps:
       - uses: actions/checkout@v4
@@ -29,35 +28,10 @@ jobs:
       - name: Setup Cog & Auth
         uses: replicate/setup-cog@v2
         with:
-          # Use the Replicate token for authentication and push
           token: ${{ secrets.REPLICATE_API_TOKEN }} 
           
       # 2. Build and Push the Model Image to Replicate
       - name: Build and Push Model Image
-        # This command reads cog.yaml, builds the image, and pushes it to Replicate
-        # This will create a new version of your model ready for training.
+        # This command reads cog.yaml, builds the image, and pushes it to Replicate.
         run: |
           cog push r8.im/${{ inputs.model_name }}
-
-      # 3. Setup Python (Mandatory for the next step which runs your Python script)
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11' 
-
-      # 4. Install Dependencies (Need only 'replicate' to trigger the remote training API)
-      - name: 📦 Install Replicate CLI
-        run: |
-          pip install replicate
-          
-      # 5. Execute the Training Job (Triggering the A100 Fine-tuning)
-      - name: 🚀 Trigger Remote Fine-Tuning Job
-        env:
-          # Passes the required token to the script environment
-          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
-          # Passes the Hugging Face token (needed in train.py to download Llama 3)
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
-        run: |
-          # This command directly executes your local train.py script
-          # The script is responsible for initiating the *remote* training job on Replicate.
-          python3 train.py
