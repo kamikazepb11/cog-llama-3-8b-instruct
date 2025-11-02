@@ -1,24 +1,32 @@
 build:
   gpu: true
-  python_version: "3.11"
+  python_version: "3.10" # CHANGED to 3.10 for build stability and cached images
   python_requirements: "requirements.txt"
   cuda: "12.1"
 
-  # System packages (as previously defined)
+  # System packages added to support compilation of Python (libssl) and scientific dependencies (libblas, liblapack, build-essential).
   system_packages:
-    - "build-essential"
-    - "libssl-dev"
-    # ... (rest of system packages remain the same)
-    - "curl"
+    - "build-essential"   
+    - "libssl-dev"        
+    - "zlib1g-dev"        
+    - "libbz2-dev"        
+    - "libreadline-dev"   
+    - "libsqlite3-dev"    
+    - "libffi-dev"        
+    - "liblzma-dev"       
+    - "python3-dev"       
+    - "tk-dev"            
+    - "libncurses5-dev"   
+    - "libgdbm-dev"       
+    - "libc6-dev"         
+    - "libblas-dev"       
+    - "liblapack-dev"     
+    - "git"
+    - "curl"              
 
-  # CRITICAL FIX: Adding Cache Cleanup steps BEFORE installing Unsloth
+  # Manually install Unsloth (the complex library) to bypass the main pip install block and avoid metadata errors.
   run:
-    # 1. Clear APT cache (Linux system package cache)
-    - rm -rf /var/lib/apt/lists/*
-    # 2. Clear PIP cache
-    - pip cache purge 
-    # 3. Manually install Unsloth (the biggest complexity)
-    - pip install unsloth[lora]==2024.9
-
-train: "train.py:train"
+    - pip install unsloth[lora]==2024.9 
+    
+train: "train.py:train" 
 predict: "predict.py:Predictor"
