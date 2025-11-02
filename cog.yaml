@@ -4,10 +4,7 @@ build:
   python_requirements: "requirements.txt"
   cuda: "12.1"
   
-  # CRITICAL FIX: Allocate more space for compilation and installation to solve "No space left"
-  build_disk_space: 100 # Allocates 100 GB for the build environment
-  
-  # System libraries needed for full Python compilation (to resolve symtable.o and sysmodule.o errors)
+  # FINAL, COMPATIBLE FIX: System packages for full Python and dependency compilation.
   system_packages:
     - "build-essential"   
     - "libssl-dev"        
