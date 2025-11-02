@@ -1,10 +1,13 @@
+# cog.yaml
 build:
   gpu: true
   python_version: "3.11"
   python_requirements: "requirements.txt"
   cuda: "12.1"
-  # NOTE: The 'train' entry is MANDATORY for Replicate to accept fine-tuning jobs.
-  # We assume your core training logic resides in a 'train.py' file.
+  
+  # CRITICAL FIX: Manually install Unsloth after the main dependencies
+  run:
+    - pip install unsloth[lora]==2024.9 
+    
 train: "train.py:train" 
-
 predict: "predict.py:Predictor"
