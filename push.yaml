@@ -1,30 +1,63 @@
-name: Final Model Deployment V2
+# .github/workflows/push.yaml
+
+name: Final Llama 3 QLoRA Train and Deploy
 
 on:
+  # Trigger automatically whenever code is pushed to the main branch
   push:
     branches:
       - main
+  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
     inputs:
       model_name:
-        description: 'Model Name (owner/model) for Cog Push'
+        description: 'Replicate Model Name (owner/model) for Cog Push'
         required: true
-        default: 'resonance/svs'
+        default: 'resonance/svs' # Your default model name
 
 jobs:
-  deploy:
+  # This job both builds the image AND runs the training script inside it.
+  deploy_and_train:
+    # We must run this on a powerful runner to handle the image build and script execution
     runs-on: ubuntu-latest
+    timeout-minutes: 180 # Set a generous timeout (3 hours) for the full process
+
     steps:
-      # 1. CHECKOUT (No special LFS flags needed)
       - uses: actions/checkout@v4
       
-      # 2. Setup Cog & Auth
+      # 1. Setup Cog, Auth, and Replicate Token
       - name: Setup Cog & Auth
         uses: replicate/setup-cog@v2
         with:
+          # Use the Replicate token for authentication and push
           token: ${{ secrets.REPLICATE_API_TOKEN }} 
           
-      - name: Push Model to Replicate Registry
+      # 2. Build and Push the Model Image to Replicate
+      - name: Build and Push Model Image
+        # This command reads cog.yaml, builds the image, and pushes it to Replicate
+        # This will create a new version of your model ready for training.
         run: |
-          # The model name is passed via GitHub Action input
           cog push r8.im/${{ inputs.model_name }}
+
+      # 3. Setup Python (Mandatory for the next step which runs your Python script)
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' 
+
+      # 4. Install Dependencies (Need only 'replicate' to trigger the remote training API)
+      - name: 📦 Install Replicate CLI
+        run: |
+          pip install replicate
+          
+      # 5. Execute the Training Job (Triggering the A100 Fine-tuning)
+      - name: 🚀 Trigger Remote Fine-Tuning Job
+        env:
+          # Passes the required token to the script environment
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          # Passes the Hugging Face token (needed in train.py to download Llama 3)
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
+        run: |
+          # This command directly executes your local train.py script
+          # The script is responsible for initiating the *remote* training job on Replicate.
+          python3 train.py
