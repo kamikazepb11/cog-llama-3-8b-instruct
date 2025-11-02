@@ -3,30 +3,22 @@ build:
   python_version: "3.11"
   python_requirements: "requirements.txt"
   cuda: "12.1"
-  
-  # FINAL, COMPATIBLE FIX: System packages for full Python and dependency compilation.
-  system_packages:
-    - "build-essential"   
-    - "libssl-dev"        
-    - "zlib1g-dev"        
-    - "libbz2-dev"        
-    - "libreadline-dev"   
-    - "libsqlite3-dev"    
-    - "libffi-dev"        
-    - "liblzma-dev"       
-    - "python3-dev"       
-    - "tk-dev"            
-    - "libncurses5-dev"   
-    - "libgdbm-dev"       
-    - "libc6-dev"         
-    - "libblas-dev"       
-    - "liblapack-dev"     
-    - "git"
-    - "curl"              
 
-  # Manually install Unsloth to bypass 'metadata-generation-failed' errors.
+  # System packages (as previously defined)
+  system_packages:
+    - "build-essential"
+    - "libssl-dev"
+    # ... (rest of system packages remain the same)
+    - "curl"
+
+  # CRITICAL FIX: Adding Cache Cleanup steps BEFORE installing Unsloth
   run:
-    - pip install unsloth[lora]==2024.9 
-    
-train: "train.py:train" 
+    # 1. Clear APT cache (Linux system package cache)
+    - rm -rf /var/lib/apt/lists/*
+    # 2. Clear PIP cache
+    - pip cache purge 
+    # 3. Manually install Unsloth (the biggest complexity)
+    - pip install unsloth[lora]==2024.9
+
+train: "train.py:train"
 predict: "predict.py:Predictor"
