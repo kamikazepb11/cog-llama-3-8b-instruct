@@ -1,8 +1,10 @@
 # requirements.txt
-# REMOVED: scipy
-# REMOVED: numpy (pulled by scipy)
+# This list is minimal and contains no large libraries (like torch, bitsandbytes, or trl).
+# Those large libraries are now installed via sequential 'run:' steps in cog.yaml to control disk usage.
+
 transformers==4.43.3
 accelerate==0.31.0
 datasets==2.19.2
 peft==0.11.1
 sentencepiece==0.2.0
+scipy
