@@ -1,10 +1,9 @@
 # requirements.txt
-torch==2.3.1
+# REMOVED: torch==2.3.1 - Will be provided by Cog base image
 transformers==4.43.3
 accelerate==0.31.0
 datasets==2.19.2
 peft==0.11.1
-bitsandbytes==0.43.2
-trl==0.9.4
 sentencepiece==0.2.0
 scipy
+# REMOVED: bitsandbytes, trl - Will be installed below or via unsloth
